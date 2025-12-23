@@ -109,7 +109,8 @@ public class SecurityConfig {
             configuration.setAllowedOrigins(List.of(
                 "https://myfamilydoc.it",
                 "https://www.myfamilydoc.it",
-                "https://app.myfamilydoc.it"
+                "https://app.myfamilydoc.it",
+                "https://test.myfamilydoc.it"
             ));
         } else {
             // DEVELOPMENT/TEST
@@ -118,6 +119,7 @@ public class SecurityConfig {
                 "http://localhost:8080",
                 "http://localhost:3000",
                 "https://test.myfamilydoc.it",
+                "http://test.myfamilydoc.it",
                 "capacitor://localhost"
             ));
         }
