@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    log4j2.xml — Configurazione centralizzata logging.
+
+    Struttura log files:
+    - app.log      → Log applicativo generale (controller, service, repository)
+    - audit.log    → TUTTO l'audit in un unico file (@Auditable AOP + AuditLogService)
+    - security.log → Autenticazione, JWT, Spring Security
+    - error.log    → Solo errori (ERROR e superiori), da tutti i componenti
+
+    Pattern: ogni riga include [correlationId] [clientSource] per tracciabilita.
+    Il correlationId viene dal CorrelationIdFilter (MDC).
+    Il clientSource identifica la sorgente (app, web, admin, unknown).
+-->
+<Configuration status="WARN" monitorInterval="30">
+
+    <Properties>
+        <!-- Pattern con correlationId + clientSource -->
+        <Property name="LOG_PATTERN">
+            %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %-5level [%X{correlationId:-no-corr}] [%X{clientSource:-unknown}] %logger{36} - %msg%n
+        </Property>
+        <!-- Pattern compatto per audit (senza thread, piu leggibile) -->
+        <Property name="AUDIT_PATTERN">
+            %d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%X{correlationId:-no-corr}] [%X{clientSource:-unknown}] %logger{20} - %msg%n
+        </Property>
+        <Property name="APP_LOG_ROOT">/home/myfamilydoc_app/logs</Property>
+    </Properties>
+
+    <Appenders>
+
+        <!-- Console -->
+        <Console name="Console" target="SYSTEM_OUT">
+            <PatternLayout pattern="${LOG_PATTERN}"/>
+        </Console>
+
+        <!-- Application Log -->
+        <RollingFile name="AppLog"
+                     fileName="${APP_LOG_ROOT}/app.log"
+                     filePattern="${APP_LOG_ROOT}/app-%d{yyyy-MM-dd}-%i.log.gz">
+            <PatternLayout pattern="${LOG_PATTERN}"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+                <SizeBasedTriggeringPolicy size="100MB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="90"/>
+        </RollingFile>
+
+        <!-- Security Log (solo autenticazione e JWT) -->
+        <RollingFile name="SecurityLog"
+                     fileName="${APP_LOG_ROOT}/security.log"
+                     filePattern="${APP_LOG_ROOT}/security-%d{yyyy-MM-dd}-%i.log.gz">
+            <PatternLayout pattern="${LOG_PATTERN}"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+                <SizeBasedTriggeringPolicy size="50MB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="90"/>
+        </RollingFile>
+
+        <!-- Audit Log (UNICO file per tutto l'audit) -->
+        <RollingFile name="AuditLog"
+                     fileName="${APP_LOG_ROOT}/audit.log"
+                     filePattern="${APP_LOG_ROOT}/audit-%d{yyyy-MM-dd}-%i.log.gz">
+            <PatternLayout pattern="${AUDIT_PATTERN}"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+                <SizeBasedTriggeringPolicy size="50MB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="90"/>
+        </RollingFile>
+
+        <!-- Error Log -->
+        <RollingFile name="ErrorLog"
+                     fileName="${APP_LOG_ROOT}/error.log"
+                     filePattern="${APP_LOG_ROOT}/error-%d{yyyy-MM-dd}-%i.log.gz">
+            <PatternLayout pattern="${LOG_PATTERN}"/>
+            <ThresholdFilter level="ERROR" onMatch="ACCEPT" onMismatch="DENY"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+                <SizeBasedTriggeringPolicy size="50MB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="90"/>
+        </RollingFile>
+
+    </Appenders>
+
+    <Loggers>
+
+        <!-- =========================================================
+             APPLICATION
+             ========================================================= -->
+
+        <!-- App principale (controller, service, repository) -->
+        <Logger name="it.myfamilydoc" level="info" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="AppLog"/>
+            <AppenderRef ref="ErrorLog"/>
+        </Logger>
+
+        <!-- =========================================================
+             AUDIT — Tutto in audit.log
+             ========================================================= -->
+
+        <!-- AOP @Auditable (auth service) -->
+        <Logger name="it.myfamilydoc.aop" level="info" additivity="false">
+            <AppenderRef ref="AuditLog"/>
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <!-- AOP @Auditable (rest service) -->
+        <Logger name="it.myfamilydoc.restservice.aop" level="info" additivity="false">
+            <AppenderRef ref="AuditLog"/>
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <!-- AOP @Auditable (utility service) -->
+        <Logger name="it.myfamilydoc.webutility.aop" level="info" additivity="false">
+            <AppenderRef ref="AuditLog"/>
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <!-- AuditLogService (auth service) -->
+        <Logger name="it.myfamilydoc.service.AuditLogService" level="info" additivity="false">
+            <AppenderRef ref="AuditLog"/>
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <!-- AuditLogService (rest service) -->
+        <Logger name="it.myfamilydoc.restservice.service.AuditLogService" level="info" additivity="false">
+            <AppenderRef ref="AuditLog"/>
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <!-- =========================================================
+             SECURITY — Solo autenticazione e filtri JWT
+             ========================================================= -->
+
+        <!-- Security package (rest service) -->
+        <Logger name="it.myfamilydoc.restservice.security" level="debug" additivity="false">
+            <AppenderRef ref="SecurityLog"/>
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <!-- Security package (auth service) -->
+        <Logger name="it.myfamilydoc.security" level="debug" additivity="false">
+            <AppenderRef ref="SecurityLog"/>
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <!-- Security package (utility service) -->
+        <Logger name="it.myfamilydoc.webutility.security" level="debug" additivity="false">
+            <AppenderRef ref="SecurityLog"/>
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <!-- Filtri (JWT, CORS, ecc.) — vanno in security -->
+        <Logger name="it.myfamilydoc.filter" level="info" additivity="false">
+            <AppenderRef ref="SecurityLog"/>
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <Logger name="it.myfamilydoc.restservice.filter" level="info" additivity="false">
+            <AppenderRef ref="SecurityLog"/>
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <Logger name="it.myfamilydoc.webutility.filter" level="info" additivity="false">
+            <AppenderRef ref="SecurityLog"/>
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <!-- Spring Security -->
+        <Logger name="org.springframework.security" level="warn" additivity="false">
+            <AppenderRef ref="SecurityLog"/>
+        </Logger>
+
+        <!-- =========================================================
+             FRAMEWORK (basso rumore)
+             ========================================================= -->
+
+        <Logger name="org.springframework" level="warn" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="AppLog"/>
+        </Logger>
+
+        <Logger name="org.hibernate.SQL" level="warn" additivity="false">
+            <AppenderRef ref="AppLog"/>
+        </Logger>
+
+        <!-- MAI log parametri SQL (dati sensibili) -->
+        <Logger name="org.hibernate.type.descriptor.sql.BasicBinder" level="off" additivity="false"/>
+        <Logger name="org.hibernate.orm.jdbc.bind" level="off" additivity="false"/>
+
+        <!-- =========================================================
+             ROOT
+             ========================================================= -->
+
+        <Root level="info">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="AppLog"/>
+            <AppenderRef ref="ErrorLog"/>
+        </Root>
+
+    </Loggers>
+
+</Configuration>
