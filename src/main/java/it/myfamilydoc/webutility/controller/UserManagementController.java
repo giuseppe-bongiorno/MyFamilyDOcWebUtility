@@ -5,6 +5,7 @@ import it.myfamilydoc.webutility.dto.DeleteUserRequest;
 import it.myfamilydoc.webutility.dto.UserManagementDto;
 import it.myfamilydoc.webutility.dto.UserStatsDto;
 import it.myfamilydoc.webutility.service.UserManagementService;
+import it.myfamilydoc.webutility.aop.Auditable;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import org.slf4j.Logger;
@@ -55,6 +56,7 @@ public class UserManagementController {
     // ══════════════════════════════════════════════════════════════
 
     @GetMapping
+    @Auditable(action = "VIEW_ALL_USERS", entityType = "User")
     public ResponseEntity<Map<String, Object>> getUsers(
             @RequestParam(required = false, defaultValue = "") String search,
             @RequestParam(required = false, defaultValue = "ALL") String role,
@@ -82,6 +84,7 @@ public class UserManagementController {
     }
 
     @GetMapping("/stats")
+    @Auditable(action = "VIEW_USER_STATS", entityType = "User")
     public ResponseEntity<Map<String, Object>> getUserStats(Authentication authentication) {
         log.info("Richiesta statistiche utenti da admin: {}", authentication.getName());
 
@@ -105,6 +108,7 @@ public class UserManagementController {
     // ══════════════════════════════════════════════════════════════
 
     @PutMapping("/{userId}/enable")
+    @Auditable(action = "ENABLE_USER", entityType = "User", entityIdParam = "userId")
     public ResponseEntity<Map<String, Object>> enableUser(
             @PathVariable @Positive Long userId,
             Authentication authentication) {
@@ -124,6 +128,7 @@ public class UserManagementController {
     }
 
     @PutMapping("/{userId}/disable")
+    @Auditable(action = "DISABLE_USER", entityType = "User", entityIdParam = "userId")
     public ResponseEntity<Map<String, Object>> disableUser(
             @PathVariable @Positive Long userId,
             Authentication authentication) {
@@ -143,6 +148,7 @@ public class UserManagementController {
     }
 
     @PutMapping("/{userId}/verify-email")
+    @Auditable(action = "ADMIN_VERIFY_EMAIL", entityType = "User", entityIdParam = "userId")
     public ResponseEntity<Map<String, Object>> verifyEmail(
             @PathVariable @Positive Long userId,
             Authentication authentication) {
@@ -162,6 +168,7 @@ public class UserManagementController {
     }
 
     @PutMapping("/{userId}/role")
+    @Auditable(action = "CHANGE_USER_ROLE", entityType = "User", entityIdParam = "userId")
     public ResponseEntity<Map<String, Object>> changeRole(
             @PathVariable @Positive Long userId,
             @Valid @RequestBody ChangeRoleRequest request,
@@ -190,6 +197,7 @@ public class UserManagementController {
     // ══════════════════════════════════════════════════════════════
 
     @PostMapping("/{userId}/reset-password")
+    @Auditable(action = "ADMIN_RESET_PASSWORD", entityType = "User", entityIdParam = "userId")
     public ResponseEntity<Map<String, Object>> resetPassword(
             @PathVariable @Positive Long userId,
             Authentication authentication) {
@@ -213,6 +221,7 @@ public class UserManagementController {
     // ══════════════════════════════════════════════════════════════
 
     @DeleteMapping("/{userId}")
+    @Auditable(action = "DELETE_USER", entityType = "User", entityIdParam = "userId")
     public ResponseEntity<Map<String, Object>> deleteUser(
             @PathVariable @Positive Long userId,
             @RequestBody(required = false) DeleteUserRequest request,
@@ -240,6 +249,7 @@ public class UserManagementController {
     // ══════════════════════════════════════════════════════════════
 
     @PutMapping("/{userId}/restore")
+    @Auditable(action = "RESTORE_USER", entityType = "User", entityIdParam = "userId")
     public ResponseEntity<Map<String, Object>> restoreUser(
             @PathVariable @Positive Long userId,
             Authentication authentication) {
@@ -261,6 +271,7 @@ public class UserManagementController {
     }
 
     @PutMapping("/{userId}/anonymize")
+    @Auditable(action = "ANONYMIZE_USER_GDPR", entityType = "User", entityIdParam = "userId")
     public ResponseEntity<Map<String, Object>> anonymizeUser(
             @PathVariable @Positive Long userId,
             Authentication authentication) {

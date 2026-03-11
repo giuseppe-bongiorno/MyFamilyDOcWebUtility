@@ -2,12 +2,14 @@ package it.myfamilydoc.webutility.controller;
 
 import it.myfamilydoc.webutility.dto.ContainerHealthDto;
 import it.myfamilydoc.webutility.service.DockerMonitorService;
+import it.myfamilydoc.webutility.aop.Auditable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -22,6 +24,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/admin/system-health")
 @PreAuthorize("hasRole('ADMIN')")
+@Validated
 public class SystemHealthController {
 
     private static final Logger log = LoggerFactory.getLogger(SystemHealthController.class);
@@ -32,9 +35,14 @@ public class SystemHealthController {
         this.dockerMonitorService = dockerMonitorService;
     }
 
+    // ══════════════════════════════════════════════════════════════
+    // GET - Lettura
+    // ══════════════════════════════════════════════════════════════
+
     @GetMapping
-    public ResponseEntity<Map<String,Object>> getSystemHealth(Authentication authentication) {
-        log.info("Received system health request from user: {}", authentication.getName());
+    @Auditable(action = "VIEW_SYSTEM_HEALTH", entityType = "System")
+    public ResponseEntity<Map<String, Object>> getSystemHealth(Authentication authentication) {
+        log.info("Richiesta stato salute sistema da admin: {}", authentication.getName());
 
         try {
             // Chiamo il servizio avanzato che restituisce metriche reali
@@ -47,15 +55,27 @@ public class SystemHealthController {
 
             return ResponseEntity.ok(result);
         } catch (Exception e) {
-            log.error("Error fetching system health", e);
-
-            Map<String,Object> error = new HashMap<>();
-            error.put("success", false);
-            error.put("error", Map.of(
-                "message", "Errore durante la lettura dello stato dei container: " + e.getMessage(),
-                "code", "SYSTEM_HEALTH_ERROR"
-            ));
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+            log.error("Errore recupero stato salute sistema", e);
+            return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Errore durante la lettura dello stato dei container: " + e.getMessage());
         }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // Response Helpers
+    // ══════════════════════════════════════════════════════════════
+
+    private ResponseEntity<Map<String, Object>> buildSuccessResponse(String message) {
+        Map<String, Object> result = new HashMap<>();
+        result.put("success", true);
+        result.put("message", message);
+        return ResponseEntity.ok(result);
+    }
+
+    private ResponseEntity<Map<String, Object>> buildErrorResponse(HttpStatus status, String message) {
+        Map<String, Object> error = new HashMap<>();
+        error.put("success", false);
+        error.put("error", Map.of("message", message));
+        return ResponseEntity.status(status).body(error);
     }
 }
