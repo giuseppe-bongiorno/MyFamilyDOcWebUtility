@@ -110,6 +110,22 @@ public class DashboardController {
         }
     }
 
+    @GetMapping("/notification-history")
+    @Auditable(action = "VIEW_NOTIFICATION_HISTORY", entityType = "Dashboard")
+    public ResponseEntity<Map<String, Object>> getNotificationHistory(
+            @RequestParam(required = false, defaultValue = "50") int limit,
+            Authentication authentication) {
+        log.info("Richiesta cronologia notifiche da admin: {}", authentication.getName());
+
+        try {
+            List<NotificationHistoryDto> history = dashboardService.getNotificationHistory(limit);
+            return buildDataResponse(history);
+        } catch (Exception e) {
+            log.error("Errore recupero cronologia notifiche", e);
+            return buildErrorResponse("Errore durante il recupero della cronologia: " + e.getMessage());
+        }
+    }
+
     // ── Response Helpers ─────────────────────────────────────────
 
     private ResponseEntity<Map<String, Object>> buildDataResponse(Object data) {

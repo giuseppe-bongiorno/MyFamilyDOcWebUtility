@@ -35,7 +35,6 @@ public class DashboardService {
         this.jdbcTemplate = jdbcTemplate;
     }
 
-    
     // ══════════════════════════════════════════════════════════════
     // 1. STATS (KPI Cards)
     // ══════════════════════════════════════════════════════════════
@@ -79,8 +78,6 @@ public class DashboardService {
                 "SELECT COUNT(*) FROM medical_data.push_notification_log WHERE created_at >= date_trunc('month', CURRENT_DATE)",
                 "SELECT COUNT(*) FROM medical_data.push_notification_log WHERE created_at >= date_trunc('month', CURRENT_DATE) - INTERVAL '1 month' AND created_at < date_trunc('month', CURRENT_DATE)"
         ));
-        
-        
 
         // ── Sistema ──────────────────────────────────────────────
         DashboardStatsDto.SystemStatsSection system = stats.getSystem();
@@ -299,6 +296,40 @@ public class DashboardService {
         });
 
         return distribution;
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // 6. NOTIFICATION HISTORY (da push_notification_log)
+    // ══════════════════════════════════════════════════════════════
+
+    public List<NotificationHistoryDto> getNotificationHistory(int limit) {
+        try {
+            return jdbcTemplate.query(
+                    """
+                    SELECT p.id, u.username, p.title, p.body, p.status,
+                           p.created_at::text AS timestamp
+                    FROM medical_data.push_notification_log p
+                    JOIN auth_schema.users u ON u.id = p.user_id
+                    ORDER BY p.created_at DESC
+                    LIMIT ?
+                    """,
+                    new Object[]{limit},
+                    (rs, rowNum) -> {
+                        NotificationHistoryDto dto = new NotificationHistoryDto();
+                        dto.setId(rs.getLong("id"));
+                        dto.setUser(rs.getString("username"));
+                        dto.setTitle(rs.getString("title"));
+                        dto.setBody(rs.getString("body"));
+                        dto.setStatus(rs.getString("status"));
+                        dto.setTimestamp(rs.getString("timestamp"));
+                        dto.setDevices(1); // ogni riga = 1 invio a 1 device
+                        return dto;
+                    }
+            );
+        } catch (Exception e) {
+            log.warn("Errore query notification history: {}", e.getMessage());
+            return Collections.emptyList();
+        }
     }
 
     // ══════════════════════════════════════════════════════════════
