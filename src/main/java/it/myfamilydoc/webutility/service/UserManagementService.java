@@ -176,6 +176,68 @@ public class UserManagementService {
                 user.getUsername(), userId, reason);
     }
 
+    /**
+     * Ripristina un utente precedentemente eliminato (soft-delete).
+     * Rimuove il flag deleted_at e riabilita l'account.
+     */
+    @Transactional
+    public void restoreUser(Long userId) {
+        UserEntity user = findUserOrThrow(userId);
+
+        if (user.getDeletedAt() == null) {
+            throw new IllegalStateException("L'utente non è eliminato, non può essere ripristinato");
+        }
+        if (Boolean.TRUE.equals(user.getAnonymized())) {
+            throw new IllegalStateException("L'utente è stato anonimizzato e non può essere ripristinato");
+        }
+
+        user.setDeletedAt(null);
+        user.setDeletionReason(null);
+        user.setEnabled(true);
+        userRepository.save(user);
+        log.info("Utente {} (ID: {}) ripristinato con successo", user.getUsername(), userId);
+    }
+
+    /**
+     * Anonimizza definitivamente un utente (GDPR Art. 17 - Diritto all'oblio).
+     * 
+     * Sovrascrive tutti i dati personali con valori anonimi.
+     * Il record resta nel DB per integrità referenziale e audit,
+     * ma non è più riconducibile alla persona fisica.
+     * 
+     * ATTENZIONE: Questa operazione è IRREVERSIBILE.
+     */
+    @Transactional
+    public void anonymizeUser(Long userId) {
+        UserEntity user = findUserOrThrow(userId);
+
+        if (user.getDeletedAt() == null) {
+            throw new IllegalStateException("L'utente deve essere prima eliminato per poter essere anonimizzato");
+        }
+        if (Boolean.TRUE.equals(user.getAnonymized())) {
+            throw new IllegalStateException("L'utente è già stato anonimizzato");
+        }
+
+        String anonId = "ANON_" + userId;
+
+        // Sovrascrive dati personali
+        user.setUsername(anonId);
+        user.setEmail(anonId + "@anonymized.local");
+        user.setPasswordHash("ANONYMIZED");
+        user.setAnonymized(true);
+        user.setEnabled(false);
+
+        // Rimuove token e dati sensibili residui
+        user.setResetTokenHash(null);
+        user.setResetTokenExpiryDate(null);
+        user.setLastLoginIp(null);
+
+        // Preserva: id, createdAt, deletedAt, deletionReason (per audit trail)
+
+        userRepository.save(user);
+        log.info("Utente ID: {} anonimizzato definitivamente (GDPR Art. 17)", userId);
+    }
+
     // ══════════════════════════════════════════════════════════════
     // HELPERS
     // ══════════════════════════════════════════════════════════════
@@ -230,6 +292,7 @@ public class UserManagementService {
         dto.setRole(role);
         dto.setEnabled(user.isEnabled());
         dto.setEmailVerified(Boolean.TRUE.equals(user.getEmailVerified()));
+        dto.setAnonymized(Boolean.TRUE.equals(user.getAnonymized()));
         dto.setLastLoginAt(user.getLastLoginAt() != null ? user.getLastLoginAt().format(ISO_FORMATTER) : null);
         dto.setLastLoginIp(user.getLastLoginIp() != null ? user.getLastLoginIp().getHostAddress() : null);
         dto.setCreatedAt(user.getCreatedAt() != null ? user.getCreatedAt().format(ISO_FORMATTER) : null);

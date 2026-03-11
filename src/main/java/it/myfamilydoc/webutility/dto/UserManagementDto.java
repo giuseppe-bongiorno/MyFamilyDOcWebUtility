@@ -14,6 +14,7 @@ public class UserManagementDto {
     private String role;          // Ruolo principale: ADMIN, DEV, DOC, USER
     private boolean enabled;
     private boolean emailVerified;
+    private boolean anonymized;
     private String lastLoginAt;
     private String lastLoginIp;
     private String createdAt;
@@ -40,6 +41,9 @@ public class UserManagementDto {
 
     public boolean isEmailVerified() { return emailVerified; }
     public void setEmailVerified(boolean emailVerified) { this.emailVerified = emailVerified; }
+
+    public boolean isAnonymized() { return anonymized; }
+    public void setAnonymized(boolean anonymized) { this.anonymized = anonymized; }
 
     public String getLastLoginAt() { return lastLoginAt; }
     public void setLastLoginAt(String lastLoginAt) { this.lastLoginAt = lastLoginAt; }

@@ -236,6 +236,52 @@ public class UserManagementController {
     }
 
     // ══════════════════════════════════════════════════════════════
+    // PUT - Ripristino e Anonimizzazione
+    // ══════════════════════════════════════════════════════════════
+
+    @PutMapping("/{userId}/restore")
+    public ResponseEntity<Map<String, Object>> restoreUser(
+            @PathVariable @Positive Long userId,
+            Authentication authentication) {
+
+        log.info("Admin {} richiede ripristino utente ID: {}", authentication.getName(), userId);
+
+        try {
+            userManagementService.restoreUser(userId);
+            return buildSuccessResponse("Utente ripristinato con successo");
+        } catch (IllegalArgumentException e) {
+            return buildErrorResponse(HttpStatus.NOT_FOUND, e.getMessage());
+        } catch (IllegalStateException e) {
+            return buildErrorResponse(HttpStatus.BAD_REQUEST, e.getMessage());
+        } catch (Exception e) {
+            log.error("Errore ripristino utente {}", userId, e);
+            return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Errore durante il ripristino dell'utente");
+        }
+    }
+
+    @PutMapping("/{userId}/anonymize")
+    public ResponseEntity<Map<String, Object>> anonymizeUser(
+            @PathVariable @Positive Long userId,
+            Authentication authentication) {
+
+        log.info("Admin {} richiede anonimizzazione utente ID: {}", authentication.getName(), userId);
+
+        try {
+            userManagementService.anonymizeUser(userId);
+            return buildSuccessResponse("Utente anonimizzato definitivamente (GDPR Art. 17)");
+        } catch (IllegalArgumentException e) {
+            return buildErrorResponse(HttpStatus.NOT_FOUND, e.getMessage());
+        } catch (IllegalStateException e) {
+            return buildErrorResponse(HttpStatus.BAD_REQUEST, e.getMessage());
+        } catch (Exception e) {
+            log.error("Errore anonimizzazione utente {}", userId, e);
+            return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Errore durante l'anonimizzazione dell'utente");
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════
     // Response Helpers
     // ══════════════════════════════════════════════════════════════
 
