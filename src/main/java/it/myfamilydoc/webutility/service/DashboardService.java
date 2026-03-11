@@ -35,6 +35,7 @@ public class DashboardService {
         this.jdbcTemplate = jdbcTemplate;
     }
 
+    
     // ══════════════════════════════════════════════════════════════
     // 1. STATS (KPI Cards)
     // ══════════════════════════════════════════════════════════════
